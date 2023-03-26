@@ -301,6 +301,7 @@ def parse_args():
         "--localscratch", default=False, action="store_true", help="Whether or not to use xformers."
     )
     parser.add_argument("--noise_offset", type=float, default=0, help="The scale of noise offset.")
+    parser.add_argument("--job_id", type=str, default='local', help="The scale of noise offset.")
 
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
@@ -824,4 +825,9 @@ def main():
 
 
 if __name__ == "__main__":
+    from accelerate import Accelerator
+    import torch
+    print("Cuda support:", torch.cuda.is_available(),":", torch.cuda.device_count(), "devices")
+    accelerator = Accelerator()
+    print(accelerator.state)
     main()

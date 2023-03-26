@@ -7,11 +7,14 @@ cd $MY_JOB_ROOT_PATH
 MYTIME="3:59:00"
 MYNTASKS="1"
 MYCPU="5"
-MYGRES="gpu:v100:1"
+MYGRES="gpu:v100s:2"
 
 JOB_INFO="train stepsize"
 MODEL_NAME="CompVis/stable-diffusion-v1-4"
-MYCOMMEND="python -u text2img.py --checkpoint 1500 --ema --pretrained_model_name_or_path=$MODEL_NAME --model_path ./results/sd-beihong-model/ --prompt_postfix _by_Beihong_Xu --prompt_file short_scenery_prompt"
+TRAIN_DIR="./haoyu/dataset"
+MYCOMMEND="python train_text_to_image.py --pretrained_model_name_or_path=$MODEL_NAME --train_data_dir=$TRAIN_DIR --use_ema --resolution=512 --center_crop --random_flip --train_batch_size=6 --gradient_accumulation_steps=4 --gradient_checkpointing --max_train_steps=2000 --learning_rate=5e-06 --max_grad_norm=1 --lr_scheduler="constant" --lr_warmup_steps=0 --output_dir="results/sd-haoyu-model" --checkpointing_steps 100"
+
+# MYCOMMEND="accelerate launch --main_process_port 9528 --gpu_ids '0,1' --num_processes 1 --num_machines 1 --mixed_precision="fp16" test.py"
 
 MYCOMMEND2="python3 test.py -gpu_id 0 -model 1 -attack 1 --pgd_norm 7 -batch_size 50 -path Final/VANILLA_62162198_1/iter_50 --alpha 1000 --num_iter 100 --num_stop 2000 --test_subset --seed 1"
 

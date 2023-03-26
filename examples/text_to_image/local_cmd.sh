@@ -16,8 +16,8 @@
 #   --output_dir="sd-pokemon-model" \
 #   --cache_dir="/localscratch/renjie/huggingface"
 
-export MODEL_NAME="CompVis/stable-diffusion-v1-4"
-export TRAIN_DIR="./beihong/dataset"
+MODEL_NAME="CompVis/stable-diffusion-v1-4"
+TRAIN_DIR="./beihong/dataset"
 
 accelerate launch --main_process_port 9527 --gpu_ids '2, 3' --num_processes 1 --num_machines 1 --mixed_precision="fp16" train_text_to_image.py \
   --pretrained_model_name_or_path=$MODEL_NAME \

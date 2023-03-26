@@ -178,7 +178,5 @@ wandb
 examples/text_to_image/monet/
 examples/text_to_image/sd-monet-model/
 examples/text_to_image/results/
-examples/text_to_image/beihong/
-examples/text_to_image/haoyu/
 examples/text_to_image/cmd/
 examples/text_to_image/logfile/
