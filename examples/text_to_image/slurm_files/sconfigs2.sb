@@ -1,0 +1,10 @@
+
+########## Command Lines for Job Running ##########
+
+module purge
+module load GCC/6.4.0-2.28 OpenMPI  ### load necessary modules.
+conda activate diffuser
+
+MY_ROOT_PATH="/mnt/home/renjie3/Documents/unlearnable/diffusion/diffusers/examples/text_to_image/"
+
+cd ${MY_ROOT_PATH}

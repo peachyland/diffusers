@@ -297,6 +297,9 @@ def parse_args():
     parser.add_argument(
         "--enable_xformers_memory_efficient_attention", action="store_true", help="Whether or not to use xformers."
     )
+    parser.add_argument(
+        "--localscratch", default=False, action="store_true", help="Whether or not to use xformers."
+    )
     parser.add_argument("--noise_offset", type=float, default=0, help="The scale of noise offset.")
 
     args = parser.parse_args()
@@ -393,17 +396,30 @@ def main():
             os.makedirs(args.output_dir, exist_ok=True)
 
     # Load scheduler, tokenizer and models.
-    noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="scheduler")
-    tokenizer = CLIPTokenizer.from_pretrained(
-        args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="tokenizer", revision=args.revision
-    )
-    text_encoder = CLIPTextModel.from_pretrained(
-        args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="text_encoder", revision=args.revision
-    )
-    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="vae", revision=args.revision)
-    unet = UNet2DConditionModel.from_pretrained(
-        args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="unet", revision=args.non_ema_revision
-    )
+    if args.localscratch:
+        noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="scheduler")
+        tokenizer = CLIPTokenizer.from_pretrained(
+            args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="tokenizer", revision=args.revision
+        )
+        text_encoder = CLIPTextModel.from_pretrained(
+            args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="text_encoder", revision=args.revision
+        )
+        vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="vae", revision=args.revision)
+        unet = UNet2DConditionModel.from_pretrained(
+            args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="unet", revision=args.non_ema_revision
+        )
+    else:
+        noise_scheduler = DDPMScheduler.from_pretrained(args.pretrained_model_name_or_path, subfolder="scheduler")
+        tokenizer = CLIPTokenizer.from_pretrained(
+            args.pretrained_model_name_or_path, subfolder="tokenizer", revision=args.revision
+        )
+        text_encoder = CLIPTextModel.from_pretrained(
+            args.pretrained_model_name_or_path, subfolder="text_encoder", revision=args.revision
+        )
+        vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision)
+        unet = UNet2DConditionModel.from_pretrained(
+            args.pretrained_model_name_or_path, subfolder="unet", revision=args.non_ema_revision
+        )
 
     # Freeze vae and text_encoder
     vae.requires_grad_(False)
@@ -411,9 +427,14 @@ def main():
 
     # Create EMA for the unet.
     if args.use_ema:
-        ema_unet = UNet2DConditionModel.from_pretrained(
-            args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="unet", revision=args.revision
-        )
+        if args.localscratch:
+            ema_unet = UNet2DConditionModel.from_pretrained(
+                args.pretrained_model_name_or_path, cache_dir="/localscratch/renjie/huggingface", subfolder="unet", revision=args.revision
+            )
+        else:
+            ema_unet = UNet2DConditionModel.from_pretrained(
+                args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision
+            )
         ema_unet = EMAModel(ema_unet.parameters(), model_cls=UNet2DConditionModel, model_config=ema_unet.config)
 
     if args.enable_xformers_memory_efficient_attention:
@@ -777,14 +798,23 @@ def main():
         if args.use_ema:
             ema_unet.copy_to(unet.parameters())
 
-        pipeline = StableDiffusionPipeline.from_pretrained(
-            args.pretrained_model_name_or_path,
-            text_encoder=text_encoder,
-            vae=vae,
-            unet=unet,
-            cache_dir="/localscratch/renjie/huggingface",
-            revision=args.revision,
-        )
+        if args.localscratch:
+            pipeline = StableDiffusionPipeline.from_pretrained(
+                args.pretrained_model_name_or_path,
+                text_encoder=text_encoder,
+                vae=vae,
+                unet=unet,
+                cache_dir="/localscratch/renjie/huggingface",
+                revision=args.revision,
+            )
+        else:
+            pipeline = StableDiffusionPipeline.from_pretrained(
+                args.pretrained_model_name_or_path,
+                text_encoder=text_encoder,
+                vae=vae,
+                unet=unet,
+                revision=args.revision,
+            )
         pipeline.save_pretrained(args.output_dir)
 
         if args.push_to_hub:
